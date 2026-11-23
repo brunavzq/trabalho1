@@ -1,0 +1,424 @@
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Random;
+
+class No {
+    int chave;
+    No proximo;
+
+    No(int chave) {
+        this.chave = chave;
+        this.proximo = null;
+    }
+}
+
+public class Trabalho1 {
+
+    static int VAZIO = -1;
+    static int acessos = 0;
+    static int colisoes = 0;
+    static int duplicadasDescartadas = 0;
+
+    static int funcaoHash(int chave, int tamanho) {
+        return chave % tamanho;
+    }
+
+    static int rehash(int posicao, int tamanho) {
+        return (posicao + 1) % tamanho;
+    }
+
+    static int[] criaTabelaRehashing(int tamanho) {
+        int[] tabela = new int[tamanho];
+        for (int indice = 0; indice < tamanho; indice++) {
+            tabela[indice] = VAZIO;
+        }
+        return tabela;
+    }
+
+    static No[] criaTabelaEncadeada(int tamanho) {
+        No[] tabela = new No[tamanho];
+        for (int indice = 0; indice < tamanho; indice++) {
+            tabela[indice] = new No(VAZIO);
+        }
+        return tabela;
+    }
+
+    static int insereRehashing(int[] tabela, int chave) {
+        int tamanho = tabela.length;
+        int posicao = funcaoHash(chave, tamanho);
+        int passos = 0;
+        while (passos < tamanho) {
+            acessos++;
+            passos++;
+            if (tabela[posicao] == VAZIO) {
+                tabela[posicao] = chave;
+                return 1;
+            }
+            if (passos == 1) {
+                colisoes++;
+            }
+            if (tabela[posicao] == chave) {
+                return 0;
+            }
+            posicao = rehash(posicao, tamanho);
+        }
+        return -1;
+    }
+
+    static int buscaRehashing(int[] tabela, int chave) {
+        int tamanho = tabela.length;
+        int posicao = funcaoHash(chave, tamanho);
+        int passos = 0;
+        while (passos < tamanho) {
+            acessos++;
+            passos++;
+            if (tabela[posicao] == VAZIO) {
+                return -1;
+            }
+            if (tabela[posicao] == chave) {
+                return posicao;
+            }
+            posicao = rehash(posicao, tamanho);
+        }
+        return -1;
+    }
+
+    static int insereEncadeamento(No[] tabela, int chave) {
+        int posicao = funcaoHash(chave, tabela.length);
+        acessos++;
+        if (tabela[posicao].chave == VAZIO) {
+            tabela[posicao].chave = chave;
+            return 1;
+        }
+        colisoes++;
+        if (tabela[posicao].chave == chave) {
+            return 0;
+        }
+        No anterior = tabela[posicao];
+        No atual = tabela[posicao].proximo;
+        boolean continuar = true;
+        while (atual != null && continuar) {
+            acessos++;
+            if (atual.chave < chave) {
+                anterior = atual;
+                atual = atual.proximo;
+            } else {
+                continuar = false;
+            }
+        }
+        if (atual != null && atual.chave == chave) {
+            return 0;
+        }
+        No novo = new No(chave);
+        novo.proximo = atual;
+        anterior.proximo = novo;
+        return 1;
+    }
+
+    static int buscaEncadeamento(No[] tabela, int chave) {
+        int posicao = funcaoHash(chave, tabela.length);
+        acessos++;
+        if (tabela[posicao].chave == VAZIO) {
+            return -1;
+        }
+        if (tabela[posicao].chave == chave) {
+            return posicao;
+        }
+        No atual = tabela[posicao].proximo;
+        boolean continuar = true;
+        while (atual != null && continuar) {
+            acessos++;
+            if (atual.chave < chave) {
+                atual = atual.proximo;
+            } else {
+                continuar = false;
+            }
+        }
+        if (atual != null && atual.chave == chave) {
+            return posicao;
+        }
+        return -1;
+    }
+
+    static int[] geraChaves(Random sorteio, int quantidade) {
+        int[] chaves = new int[quantidade];
+        int gerados = 0;
+        duplicadasDescartadas = 0;
+        while (gerados < quantidade) {
+            int candidata = 1000000 + sorteio.nextInt(9000000);
+            boolean jaExiste = false;
+            for (int indice = 0; indice < gerados; indice++) {
+                if (chaves[indice] == candidata) {
+                    jaExiste = true;
+                }
+            }
+            if (jaExiste) {
+                duplicadasDescartadas++;
+            } else {
+                chaves[gerados] = candidata;
+                gerados++;
+            }
+        }
+        return chaves;
+    }
+
+    static int[] geraAusentes(Random sorteio, int[] chaves, int quantidade) {
+        int[] ausentes = new int[quantidade];
+        int gerados = 0;
+        while (gerados < quantidade) {
+            int candidata = 1000000 + sorteio.nextInt(9000000);
+            boolean existeNasChaves = false;
+            for (int indice = 0; indice < chaves.length; indice++) {
+                if (chaves[indice] == candidata) {
+                    existeNasChaves = true;
+                }
+            }
+            if (!existeNasChaves) {
+                ausentes[gerados] = candidata;
+                gerados++;
+            }
+        }
+        return ausentes;
+    }
+
+    static int contaVaziasRehashing(int[] tabela) {
+        int vazias = 0;
+        for (int indice = 0; indice < tabela.length; indice++) {
+            if (tabela[indice] == VAZIO) {
+                vazias++;
+            }
+        }
+        return vazias;
+    }
+
+    static int calculaMaiorAglomeradoRehashing(int[] tabela) {
+        int maior = 0;
+        int atual = 0;
+        for (int indice = 0; indice < tabela.length; indice++) {
+            if (tabela[indice] != VAZIO) {
+                atual++;
+                if (atual > maior) {
+                    maior = atual;
+                }
+            } else {
+                atual = 0;
+            }
+        }
+        return maior;
+    }
+
+    static int contaVaziasEncadeamento(No[] tabela) {
+        int vazias = 0;
+        for (int indice = 0; indice < tabela.length; indice++) {
+            if (tabela[indice].chave == VAZIO) {
+                vazias++;
+            }
+        }
+        return vazias;
+    }
+
+    static int contaNosExtrasEncadeamento(No[] tabela) {
+        int totalNos = 0;
+        for (int indice = 0; indice < tabela.length; indice++) {
+            No percurso = tabela[indice].proximo;
+            while (percurso != null) {
+                totalNos++;
+                percurso = percurso.proximo;
+            }
+        }
+        return totalNos;
+    }
+
+    static int calculaMaiorAglomeradoEncadeamento(No[] tabela) {
+        int maior = 0;
+        for (int indice = 0; indice < tabela.length; indice++) {
+            if (tabela[indice].chave != VAZIO) {
+                int quantidadePosicao = 1;
+                No percurso = tabela[indice].proximo;
+                while (percurso != null) {
+                    quantidadePosicao++;
+                    percurso = percurso.proximo;
+                }
+                if (quantidadePosicao > maior) {
+                    maior = quantidadePosicao;
+                }
+            }
+        }
+        return maior;
+    }
+
+    static void executaTestes() {
+    }
+
+    static void executaCenario(PrintWriter arquivo, int tamanho, int carga) {
+        int quantidade = tamanho * carga / 100;
+        Random sorteio = new Random(1990);
+        int[] chaves = geraChaves(sorteio, quantidade);
+        int duplicadasCenario = duplicadasDescartadas;
+        int[] ausentes = geraAusentes(sorteio, chaves, quantidade);
+
+        Runtime.getRuntime().gc();
+        long memoriaAntesRehash = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        int[] tabelaRehash = criaTabelaRehashing(tamanho);
+        acessos = 0;
+        colisoes = 0;
+        long inicioInsRehash = System.nanoTime();
+        for (int indice = 0; indice < quantidade; indice++) {
+            insereRehashing(tabelaRehash, chaves[indice]);
+        }
+        long fimInsRehash = System.nanoTime();
+        long memoriaDepoisRehash = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+
+        int colisoesRehash = colisoes;
+        int acessosInsercaoRehash = acessos;
+        float mediaInsercaoRehash = (float) acessosInsercaoRehash / quantidade;
+        long tempoInsercaoRehash = (fimInsRehash - inicioInsRehash) / quantidade;
+        long memoriaRehash = memoriaDepoisRehash - memoriaAntesRehash;
+
+        int totalAcessosSucessoRehash = 0;
+        int maximoSucessoRehash = 0;
+        long inicioBuscaRehash = System.nanoTime();
+        for (int indice = 0; indice < quantidade; indice++) {
+            int acessosAntes = acessos;
+            acessos = 0;
+            buscaRehashing(tabelaRehash, chaves[indice]);
+            int gastoBusca = acessos;
+            acessos = acessosAntes + gastoBusca;
+            totalAcessosSucessoRehash += gastoBusca;
+            if (gastoBusca > maximoSucessoRehash) {
+                maximoSucessoRehash = gastoBusca;
+            }
+        }
+        long fimBuscaRehash = System.nanoTime();
+        float mediaBuscaSucessoRehash = (float) totalAcessosSucessoRehash / quantidade;
+        long tempoBuscaRehash = (fimBuscaRehash - inicioBuscaRehash) / quantidade;
+
+        acessos = 0;
+        for (int indice = 0; indice < quantidade; indice++) {
+            buscaRehashing(tabelaRehash, ausentes[indice]);
+        }
+        float mediaBuscaFalhaRehash = (float) acessos / quantidade;
+
+        int vaziasRehash = contaVaziasRehashing(tabelaRehash);
+        int aglomeradoRehash = calculaMaiorAglomeradoRehashing(tabelaRehash);
+        int nosExtrasRehash = 0;
+
+        if (vaziasRehash + quantidade != tamanho) {
+            System.out.println("ERRO: invariante violada");
+        }
+
+        String linhaRehash = String.format(
+                "%s;%d;%d;%d;%d;%d;%d;%.2f;%.2f;%d;%.2f;%d;%d;%d;%d;%d;%d",
+                "rehashing",
+                tamanho,
+                carga,
+                quantidade,
+                duplicadasCenario,
+                colisoesRehash,
+                acessosInsercaoRehash,
+                mediaInsercaoRehash,
+                mediaBuscaSucessoRehash,
+                maximoSucessoRehash,
+                mediaBuscaFalhaRehash,
+                vaziasRehash,
+                aglomeradoRehash,
+                nosExtrasRehash,
+                tempoInsercaoRehash,
+                tempoBuscaRehash,
+                memoriaRehash
+        );
+        System.out.println(linhaRehash);
+        arquivo.println(linhaRehash);
+
+        Runtime.getRuntime().gc();
+        long memoriaAntesEnc = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        No[] tabelaEnc = criaTabelaEncadeada(tamanho);
+        acessos = 0;
+        colisoes = 0;
+        long inicioInsEnc = System.nanoTime();
+        for (int indice = 0; indice < quantidade; indice++) {
+            insereEncadeamento(tabelaEnc, chaves[indice]);
+        }
+        long fimInsEnc = System.nanoTime();
+        long memoriaDepoisEnc = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+
+        int colisoesEnc = colisoes;
+        int acessosInsercaoEnc = acessos;
+        float mediaInsercaoEnc = (float) acessosInsercaoEnc / quantidade;
+        long tempoInsercaoEnc = (fimInsEnc - inicioInsEnc) / quantidade;
+        long memoriaEnc = memoriaDepoisEnc - memoriaAntesEnc;
+
+        int totalAcessosSucessoEnc = 0;
+        int maximoSucessoEnc = 0;
+        long inicioBuscaEnc = System.nanoTime();
+        for (int indice = 0; indice < quantidade; indice++) {
+            acessos = 0;
+            buscaEncadeamento(tabelaEnc, chaves[indice]);
+            int gastoBusca = acessos;
+            totalAcessosSucessoEnc += gastoBusca;
+            if (gastoBusca > maximoSucessoEnc) {
+                maximoSucessoEnc = gastoBusca;
+            }
+        }
+        long fimBuscaEnc = System.nanoTime();
+        float mediaBuscaSucessoEnc = (float) totalAcessosSucessoEnc / quantidade;
+        long tempoBuscaEnc = (fimBuscaEnc - inicioBuscaEnc) / quantidade;
+
+        acessos = 0;
+        for (int indice = 0; indice < quantidade; indice++) {
+            buscaEncadeamento(tabelaEnc, ausentes[indice]);
+        }
+        float mediaBuscaFalhaEnc = (float) acessos / quantidade;
+
+        int vaziasEnc = contaVaziasEncadeamento(tabelaEnc);
+        int aglomeradoEnc = calculaMaiorAglomeradoEncadeamento(tabelaEnc);
+        int nosExtrasEnc = contaNosExtrasEncadeamento(tabelaEnc);
+
+        if ((tamanho - vaziasEnc) + nosExtrasEnc != quantidade) {
+            System.out.println("ERRO: invariante violada");
+        }
+
+        String linhaEnc = String.format(
+                "%s;%d;%d;%d;%d;%d;%d;%.2f;%.2f;%d;%.2f;%d;%d;%d;%d;%d;%d",
+                "encadeamento",
+                tamanho,
+                carga,
+                quantidade,
+                duplicadasCenario,
+                colisoesEnc,
+                acessosInsercaoEnc,
+                mediaInsercaoEnc,
+                mediaBuscaSucessoEnc,
+                maximoSucessoEnc,
+                mediaBuscaFalhaEnc,
+                vaziasEnc,
+                aglomeradoEnc,
+                nosExtrasEnc,
+                tempoInsercaoEnc,
+                tempoBuscaEnc,
+                memoriaEnc
+        );
+        System.out.println(linhaEnc);
+        arquivo.println(linhaEnc);
+    }
+
+    public static void main(String[] args) throws IOException {
+        executaTestes();
+
+        PrintWriter arquivo = new PrintWriter("resultados_trabalho1.csv");
+        String cabecalho = "tecnica;tamanho;cargaPercentual;chaves;duplicadasDescartadas;colisoes;acessosInsercaoTotal;acessosInsercaoMedia;acessosBuscaSucessoMedia;acessosBuscaSucessoMaximo;acessosBuscaFalhaMedia;posicoesVazias;maiorAglomerado;nosExtras;tempoInsercaoNsPorOp;tempoBuscaSucessoNsPorOp;memoriaMedidaBytes";
+        System.out.println(cabecalho);
+        arquivo.println(cabecalho);
+
+        int[] tamanhos = {100, 1000, 10000};
+        int[] cargas = {50, 70, 90};
+
+        for (int indiceTamanho = 0; indiceTamanho < tamanhos.length; indiceTamanho++) {
+            for (int indiceCarga = 0; indiceCarga < cargas.length; indiceCarga++) {
+                executaCenario(arquivo, tamanhos[indiceTamanho], cargas[indiceCarga]);
+            }
+        }
+
+        arquivo.close();
+    }
+}
